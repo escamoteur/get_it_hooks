@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
-import 'package:get_it_mixin/get_it_mixin.dart';
+import 'package:get_it_hooks/get_it_hooks.dart';
 
 class Model extends ChangeNotifier {
   String constantValue;
@@ -28,51 +28,37 @@ class Model extends ChangeNotifier {
   Future get future => completer.future;
 }
 
-class TestStateLessWidget extends StatelessWidget with GetItMixin {
-  final bool watchTwice;
-  final bool watchOnlyTwice;
-  final bool watchXtwice;
-  final bool watchXonlytwice;
-  final bool watchStreamTwice;
-  final bool watchFutureTwice;
+class TestStateLessWidget extends HookWidget {
   final bool testIsReady;
   final bool testAllReady;
   TestStateLessWidget(
-      {Key key,
-      this.watchTwice = false,
-      this.watchOnlyTwice = false,
-      this.watchXtwice = false,
-      this.watchXonlytwice = false,
-      this.watchStreamTwice = false,
-      this.watchFutureTwice = false,
-      this.testIsReady = false,
-      this.testAllReady = false})
+      {Key key, this.testIsReady = false, this.testAllReady = false})
       : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     buildCount++;
-    final onlyRead = get<Model>().constantValue;
-    final notifierVal = watch<ValueNotifier<String>, String>();
-    final country = watchOnly((Model x) => x.country);
-    final name = watchX((Model x) => x.name);
+    final onlyRead = useGet<Model>().constantValue;
+    final notifierVal = useWatch<ValueNotifier<String>, String>();
+    final country = useWatchOnly((Model x) => x.country);
+    final name = useWatchX((Model x) => x.name);
     final nestedCountry =
-        watchXOnly((Model x) => x.nestedModel, (Model n) => n.country);
-    final streamResult = watchStream((Model x) => x.stream, 'streamResult');
-    final futureResult = watchFuture((Model x) => x.future, 'futureResult');
-    registerStreamHandler((Model x) => x.stream, (context, x, cancel) {
+        useWatchXOnly((Model x) => x.nestedModel, (Model n) => n.country);
+    final streamResult = useWatchStream((Model x) => x.stream, 'streamResult');
+    final futureResult = useWatchFuture((Model x) => x.future, 'futureResult');
+    useStreamHandler((Model x) => x.stream, (context, x, cancel) {
       streamHandlerResult = x.data;
       if (streamHandlerResult == 'Cancel') {
         cancel();
       }
     });
-    registerFutureHandler((Model x) => x.future, (context, x, cancel) {
+    useFutureHandler((Model x) => x.future, (context, x, cancel) {
       futureHandlerResult = x.data;
       if (streamHandlerResult == 'Cancel') {
         cancel();
       }
     });
-    registerHandler((Model x) => x.name, (context, x, cancel) {
+    useRegisterHandler((Model x) => x.name, (context, x, cancel) {
       listenableHandlerResult = x;
       if (x == 'Cancel') {
         cancel();
@@ -81,33 +67,14 @@ class TestStateLessWidget extends StatelessWidget with GetItMixin {
     bool allReadyResult;
     if (testAllReady) {
       allReadyResult =
-          allReady(onReady: (context) => allReadyHandlerResult = 'Ready');
+          useAllReady(onReady: (context) => allReadyHandlerResult = 'Ready');
     }
     bool isReadyResult;
 
     if (testIsReady) {
-      isReadyResult = isReady<Model>(
+      isReadyResult = useIsReady<Model>(
           instanceName: 'isReadyTest',
           onReady: (context) => isReadyHandlerResult = 'Ready');
-    }
-    if (watchTwice) {
-      final notifierVal = watch<ValueNotifier<String>, String>();
-    }
-    if (watchOnlyTwice) {
-      final country = watchOnly((Model x) => x.country);
-    }
-    if (watchXtwice) {
-      final name = watchX((Model x) => x.name);
-    }
-    if (watchXonlytwice) {
-      final nestedCountry =
-          watchXOnly((Model x) => x.nestedModel, (Model n) => n.country);
-    }
-    if (watchStreamTwice) {
-      final streamResult = watchStream((Model x) => x.stream, 'streamResult');
-    }
-    if (watchFutureTwice) {
-      final futureResult = watchFuture((Model x) => x.future, 'futureResult');
     }
     return Directionality(
       textDirection: TextDirection.ltr,
@@ -182,59 +149,6 @@ void main() {
     expect(streamResult, 'streamResult');
     expect(futureResult, 'futureResult');
     expect(buildCount, 1);
-  });
-
-  testWidgets('wathTwice', (tester) async {
-    await tester.pumpWidget(TestStateLessWidget(
-      watchTwice: true,
-    ));
-    await tester.pump();
-
-    expect(tester.takeException(), isA<ArgumentError>());
-  });
-
-  testWidgets('wathXtwice', (tester) async {
-    await tester.pumpWidget(TestStateLessWidget(
-      watchXtwice: true,
-    ));
-    await tester.pump();
-
-    expect(tester.takeException(), isA<ArgumentError>());
-  });
-
-  testWidgets('watchOnlyTwice', (tester) async {
-    await tester.pumpWidget(TestStateLessWidget(
-      watchOnlyTwice: true,
-    ));
-    await tester.pump();
-
-    expect(tester.takeException(), isA<ArgumentError>());
-  });
-
-  testWidgets('watchXOnlyTwice', (tester) async {
-    await tester.pumpWidget(TestStateLessWidget(
-      watchXonlytwice: true,
-    ));
-    await tester.pump();
-
-    expect(tester.takeException(), isA<ArgumentError>());
-  });
-
-  testWidgets('watchStream twice', (tester) async {
-    await tester.pumpWidget(TestStateLessWidget(
-      watchStreamTwice: true,
-    ));
-    await tester.pump();
-
-    expect(tester.takeException(), isA<ArgumentError>());
-  });
-  testWidgets('watchFuture twice', (tester) async {
-    await tester.pumpWidget(TestStateLessWidget(
-      watchFutureTwice: true,
-    ));
-    await tester.pump();
-
-    expect(tester.takeException(), isA<ArgumentError>());
   });
 
   testWidgets('update of non watched field', (tester) async {
@@ -429,8 +343,9 @@ void main() {
   });
   testWidgets('change multiple data', (tester) async {
     await tester.pumpWidget(TestStateLessWidget());
+    theModel.country = 'Lummerland';
     theModel.name.value = '42';
-    theModel._country = 'Lummerland';
+    await tester.pump();
     await tester.pump();
 
     final onlyRead = tester.widget<Text>(find.byKey(Key('onlyRead'))).data;
@@ -538,7 +453,7 @@ void main() {
   testWidgets('allReady async object that is not finished at the start',
       (tester) async {
     GetIt.I.registerSingletonAsync(
-        () => Future.delayed(Duration(milliseconds: 10), () => Model()),
+        () => Future.delayed(Duration(milliseconds: 100), () => Model()),
         instanceName: 'asyncObject');
     await tester.pumpWidget(TestStateLessWidget(
       testAllReady: true,

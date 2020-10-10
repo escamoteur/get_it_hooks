@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_weather_demo/the_viewmodel.dart';
-import 'package:get_it_mixin/get_it_mixin.dart';
+import 'package:get_it_hooks/get_it_hooks.dart';
 
-class WeatherListView extends StatelessWidget with GetItMixin {
+class WeatherListView extends HookWidget {
   WeatherListView();
   @override
   Widget build(BuildContext context) {
-    final data = watchX((TheViewModel x) => x.updateWeatherCommand);
+    final data = useWatchX((TheViewModel x) => x.updateWeatherCommand);
 
     return ListView.builder(
       itemCount: data.length,

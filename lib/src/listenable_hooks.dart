@@ -45,11 +45,21 @@ class _WatchXHookState<T, R> extends HookState<R, _WatchXHook<T, R>> {
     targetObject = GetIt.I<T>(instanceName: hook.instanceName);
     listenable = hook.select(targetObject);
     assert(listenable != null, 'select returned null in useWatchX');
-    handler = () => setState(() {});
-    listenable.addListener(handler);
+    _subscribe();
     if (hook.handler != null && hook.executeImmediately) {
       hook.handler(this.context, listenable.value, _unsubscribe);
     }
+  }
+
+  void _subscribe() {
+    handler = () {
+      if (hook.handler == null) {
+        setState(() {});
+      } else {
+        hook.handler(context, listenable.value, _unsubscribe);
+      }
+    };
+    listenable.addListener(handler);
   }
 
   @override
@@ -65,7 +75,7 @@ class _WatchXHookState<T, R> extends HookState<R, _WatchXHook<T, R>> {
       _unsubscribe();
       targetObject = GetIt.I<T>(instanceName: hook.instanceName);
       listenable = hook.select(targetObject);
-      listenable.addListener(handler);
+      _subscribe();
       if (hook.handler != null && hook.executeImmediately) {
         hook.handler(this.context, listenable.value, _unsubscribe);
       }
@@ -156,15 +166,15 @@ class _WatchOnlyHookState<T extends Listenable, R>
   String get debugLabel => 'useWatchX';
 }
 
-R watchXOnly<T, Q extends Listenable, R>(
+R useWatchXOnly<T, Q extends Listenable, R>(
   Q Function(T) select,
   R Function(Q listenable) only, {
   String instanceName,
 }) {
   assert(only != null, 'only can not be null in useWatchXOnly');
   assert(select != null, 'select can not be null in useWatchXOnly');
-  return use(
-      _WatchXonlyHook(select: select, only: only, instanceName: instanceName));
+  return use(_WatchXonlyHook<T, Q, R>(
+      select: select, only: only, instanceName: instanceName));
 }
 
 class _WatchXonlyHook<T, Q extends Listenable, R> extends Hook<R> {
@@ -178,7 +188,8 @@ class _WatchXonlyHook<T, Q extends Listenable, R> extends Hook<R> {
   final R Function(Q listenable) only;
   final String instanceName;
   @override
-  _WatchXHookState<T, R> createState() => _WatchXHookState<T, R>();
+  _WatchXonlyHookState<T, Q, R> createState() =>
+      _WatchXonlyHookState<T, Q, R>();
 }
 
 class _WatchXonlyHookState<T, Q extends Listenable, R>
@@ -232,4 +243,18 @@ class _WatchXonlyHookState<T, Q extends Listenable, R>
 
   @override
   String get debugLabel => 'useWatchXonly';
+}
+
+void useRegisterHandler<T, R>(
+  ValueListenable<R> Function(T) select,
+  void Function(BuildContext context, R newValue, void Function() cancel)
+      handler, {
+  bool executeImmediately = false,
+  String instanceName,
+}) {
+  use(_WatchXHook<T, R>(
+      instanceName: instanceName,
+      select: select,
+      executeImmediately: executeImmediately,
+      handler: handler));
 }
