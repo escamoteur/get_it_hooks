@@ -19,8 +19,15 @@ R useWatchX<T, R>(
 }
 
 class _WatchXHook<T, R> extends Hook<R> {
-  const _WatchXHook({this.instanceName, this.select});
+  const _WatchXHook(
+      {@required this.instanceName,
+      @required this.select,
+      this.handler,
+      this.executeImmediately = false});
 
+  final bool executeImmediately;
+  final void Function(BuildContext context, R newValue, void Function() cancel)
+      handler;
   final String instanceName;
   final ValueListenable<R> Function(T) select;
   @override
@@ -40,6 +47,9 @@ class _WatchXHookState<T, R> extends HookState<R, _WatchXHook<T, R>> {
     assert(listenable != null, 'select returned null in useWatchX');
     handler = () => setState(() {});
     listenable.addListener(handler);
+    if (hook.handler != null && hook.executeImmediately) {
+      hook.handler(this.context, listenable.value, _unsubscribe);
+    }
   }
 
   @override
@@ -49,19 +59,27 @@ class _WatchXHookState<T, R> extends HookState<R, _WatchXHook<T, R>> {
 
   @override
   void didUpdateHook(_WatchXHook<T, R> oldHook) {
+    super.didUpdateHook(oldHook);
     if (oldHook.instanceName != hook.instanceName ||
         oldHook.select(targetObject) != listenable) {
-      listenable.removeListener(handler);
+      _unsubscribe();
       targetObject = GetIt.I<T>(instanceName: hook.instanceName);
       listenable = hook.select(targetObject);
       listenable.addListener(handler);
+      if (hook.handler != null && hook.executeImmediately) {
+        hook.handler(this.context, listenable.value, _unsubscribe);
+      }
     }
-    super.didUpdateHook(oldHook);
+  }
+
+  void _unsubscribe() {
+    listenable.removeListener(handler);
   }
 
   @override
   void dispose() {
-    listenable.removeListener(handler);
+    _unsubscribe();
+    super.dispose();
   }
 
   @override
@@ -81,7 +99,7 @@ R useWatchOnly<T extends Listenable, R>(
 
 class _WatchOnlyHook<T extends Listenable, R> extends Hook<R> {
   const _WatchOnlyHook({
-    this.instanceName,
+    @required this.instanceName,
     @required this.only,
   });
 
@@ -120,19 +138,98 @@ class _WatchOnlyHookState<T extends Listenable, R>
 
   @override
   void didUpdateHook(_WatchOnlyHook<T, R> oldHook) {
+    super.didUpdateHook(oldHook);
     if (oldHook.instanceName != hook.instanceName) {
       targetObject.removeListener(handler);
       targetObject = GetIt.I<T>(instanceName: hook.instanceName);
       targetObject.addListener(handler);
     }
-    super.didUpdateHook(oldHook);
   }
 
   @override
   void dispose() {
     targetObject.removeListener(handler);
+    super.dispose();
   }
 
   @override
   String get debugLabel => 'useWatchX';
+}
+
+R watchXOnly<T, Q extends Listenable, R>(
+  Q Function(T) select,
+  R Function(Q listenable) only, {
+  String instanceName,
+}) {
+  assert(only != null, 'only can not be null in useWatchXOnly');
+  assert(select != null, 'select can not be null in useWatchXOnly');
+  return use(
+      _WatchXonlyHook(select: select, only: only, instanceName: instanceName));
+}
+
+class _WatchXonlyHook<T, Q extends Listenable, R> extends Hook<R> {
+  const _WatchXonlyHook({
+    @required this.select,
+    @required this.only,
+    @required this.instanceName,
+  });
+
+  final Q Function(T) select;
+  final R Function(Q listenable) only;
+  final String instanceName;
+  @override
+  _WatchXHookState<T, R> createState() => _WatchXHookState<T, R>();
+}
+
+class _WatchXonlyHookState<T, Q extends Listenable, R>
+    extends HookState<R, _WatchXonlyHook<T, Q, R>> {
+  Listenable listenable;
+  VoidCallback handler;
+  T targetObject;
+  R lastValue;
+
+  @override
+  void initHook() {
+    super.initHook();
+    targetObject = GetIt.I<T>(instanceName: hook.instanceName);
+    listenable = hook.select(targetObject);
+    assert(listenable != null, 'select returned null in useWatchXonly');
+    lastValue = hook.only(listenable);
+    handler = () {
+      final currentValue = hook.only(listenable);
+      if (currentValue != lastValue) {
+        setState(() {
+          lastValue = currentValue;
+        });
+      }
+    };
+    listenable.addListener(handler);
+  }
+
+  @override
+  R build(BuildContext context) {
+    return lastValue;
+  }
+
+  @override
+  void didUpdateHook(_WatchXonlyHook<T, Q, R> oldHook) {
+    super.didUpdateHook(oldHook);
+    if (oldHook.instanceName != hook.instanceName ||
+        oldHook.select(targetObject) != listenable) {
+      listenable.removeListener(handler);
+      targetObject = GetIt.I<T>(instanceName: hook.instanceName);
+      listenable = hook.select(targetObject);
+      lastValue = hook.only(listenable);
+      listenable.addListener(handler);
+    }
+  }
+
+  @override
+  void dispose() {
+    listenable.removeListener(handler);
+    super.dispose();
+  }
+
+  @override
+  String get debugLabel => 'useWatchXonly';
 }
