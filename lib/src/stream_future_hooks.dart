@@ -56,6 +56,12 @@ class _WatchStreamHookState<T, R>
 
   @override
   AsyncSnapshot<R> build(BuildContext context) {
+    /// as the select could return a different Stream on different Builds
+    /// we have to handle this appropriately
+    final selectedStream = hook.select(targetObject);
+    if (selectedStream != stream) {
+      _switchSubscription();
+    }
     return _lastValue;
   }
 
@@ -64,21 +70,25 @@ class _WatchStreamHookState<T, R>
     super.didUpdateHook(oldHook);
     if (oldHook.instanceName != hook.instanceName ||
         oldHook.select(targetObject) != stream) {
-      if (_subscription != null) {
-        _unsubscribe();
-        if (hook.preserveState) {
-          _lastValue = afterDisconnected(_lastValue);
-        } else {
-          _lastValue = initial();
-          if (hook.handler != null && hook.initialValue != null) {
-            hook.handler(this.context, _lastValue, _unsubscribe);
-          }
+      _switchSubscription();
+    }
+  }
+
+  void _switchSubscription() {
+    if (_subscription != null) {
+      _unsubscribe();
+      if (hook.preserveState) {
+        _lastValue = afterDisconnected(_lastValue);
+      } else {
+        _lastValue = initial();
+        if (hook.handler != null && hook.initialValue != null) {
+          hook.handler(this.context, _lastValue, _unsubscribe);
         }
       }
-      targetObject = GetIt.I<T>(instanceName: hook.instanceName);
-      stream = hook.select(targetObject);
-      _subscribe();
     }
+    targetObject = GetIt.I<T>(instanceName: hook.instanceName);
+    stream = hook.select(targetObject);
+    _subscribe();
   }
 
   @override
@@ -233,6 +243,12 @@ class _WatchFutureHookState<T, R>
 
   @override
   AsyncSnapshot<R> build(BuildContext context) {
+    /// as the select could return a different Future on different Builds
+    /// we have to handle this appropriately
+    final selectedFuture = hook.select(targetObject);
+    if (selectedFuture != future) {
+      _switchSubscription();
+    }
     return _lastValue;
   }
 
@@ -242,21 +258,24 @@ class _WatchFutureHookState<T, R>
     if (hook.futureProvider == null &&
         (oldHook.instanceName != hook.instanceName ||
             oldHook.select(targetObject) != future)) {
-      if (_activeCallbackIdentity != null) {
-        _unsubscribe();
-        if (!hook.preserveState) {
-          _lastValue = AsyncSnapshot.withData(
-              ConnectionState.none, hook.initialValueProvider?.call());
-        } else {
-          _lastValue = _lastValue.inState(ConnectionState.none);
-          if (hook.handler != null && hook.executeImmediately) {
-            hook.handler(this.context, _lastValue, _unsubscribe);
-          }
+      targetObject = GetIt.I<T>(instanceName: hook.instanceName);
+      _switchSubscription();
+    }
+  }
+
+  void _switchSubscription() {
+    future = hook.select(targetObject);
+    if (_activeCallbackIdentity != null) {
+      _unsubscribe();
+      if (!hook.preserveState) {
+        _lastValue = AsyncSnapshot.withData(
+            ConnectionState.none, hook.initialValueProvider?.call());
+      } else {
+        _lastValue = _lastValue.inState(ConnectionState.none);
+        if (hook.handler != null && hook.executeImmediately) {
+          hook.handler(this.context, _lastValue, _unsubscribe);
         }
       }
-      targetObject = GetIt.I<T>(instanceName: hook.instanceName);
-      future = hook.select(targetObject);
-
       _subscribe();
     }
   }

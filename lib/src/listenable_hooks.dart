@@ -64,6 +64,12 @@ class _WatchXHookState<T, R> extends HookState<R, _WatchXHook<T, R>> {
 
   @override
   R build(BuildContext context) {
+    /// as the select could return a different Listenable on different Builds
+    /// we have to handle this appropriately
+    final selectedListenable = hook.select(targetObject);
+    if (selectedListenable != listenable) {
+      _switchSubscription();
+    }
     return listenable.value;
   }
 
@@ -72,13 +78,17 @@ class _WatchXHookState<T, R> extends HookState<R, _WatchXHook<T, R>> {
     super.didUpdateHook(oldHook);
     if (oldHook.instanceName != hook.instanceName ||
         oldHook.select(targetObject) != listenable) {
-      _unsubscribe();
-      targetObject = GetIt.I<T>(instanceName: hook.instanceName);
-      listenable = hook.select(targetObject);
-      _subscribe();
-      if (hook.handler != null && hook.executeImmediately) {
-        hook.handler(this.context, listenable.value, _unsubscribe);
-      }
+      _switchSubscription();
+    }
+  }
+
+  void _switchSubscription() {
+    _unsubscribe();
+    targetObject = GetIt.I<T>(instanceName: hook.instanceName);
+    listenable = hook.select(targetObject);
+    _subscribe();
+    if (hook.handler != null && hook.executeImmediately) {
+      hook.handler(this.context, listenable.value, _unsubscribe);
     }
   }
 
@@ -219,6 +229,12 @@ class _WatchXonlyHookState<T, Q extends Listenable, R>
 
   @override
   R build(BuildContext context) {
+    /// as the select could return a different Listenable on different Builds
+    /// we have to handle this appropriately
+    final selectedListenable = hook.select(targetObject);
+    if (selectedListenable != listenable) {
+      _switchSubscription();
+    }
     return lastValue;
   }
 
@@ -227,12 +243,16 @@ class _WatchXonlyHookState<T, Q extends Listenable, R>
     super.didUpdateHook(oldHook);
     if (oldHook.instanceName != hook.instanceName ||
         oldHook.select(targetObject) != listenable) {
-      listenable.removeListener(handler);
-      targetObject = GetIt.I<T>(instanceName: hook.instanceName);
-      listenable = hook.select(targetObject);
-      lastValue = hook.only(listenable);
-      listenable.addListener(handler);
+      _switchSubscription();
     }
+  }
+
+  void _switchSubscription() {
+    listenable.removeListener(handler);
+    targetObject = GetIt.I<T>(instanceName: hook.instanceName);
+    listenable = hook.select(targetObject);
+    lastValue = hook.only(listenable);
+    listenable.addListener(handler);
   }
 
   @override
