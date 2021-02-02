@@ -21,7 +21,7 @@ class Model extends ChangeNotifier {
   String get country => _country;
 
   String _emailAddress;
-  set country(String val) {
+  set emailAddress(String val) {
     _emailAddress = val;
     notifyListeners();
   }
