@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:flutter_weather_demo/the_viewmodel.dart';
+import 'package:flutter_weather_demo/weather_manager.dart';
 import 'package:functional_listener/functional_listener.dart';
 import 'package:get_it_hooks/get_it_hooks.dart';
 
@@ -12,11 +12,11 @@ class HomePage extends StatefulHookWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  ListenableSubscription errorSubscription;
+  ListenableSubscription? errorSubscription;
 
   @override
   void didChangeDependencies() {
-    errorSubscription ??= useGet<TheViewModel>()
+    errorSubscription ??= useGet<WeatherManager>()
         .updateWeatherCommand
         .thrownExceptions
         .where((x) => x != null) // filter out the error value reset
@@ -33,18 +33,18 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    errorSubscription.cancel();
+    errorSubscription!.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final isRunning =
-        useWatchX((TheViewModel x) => x.updateWeatherCommand.isExecuting);
+        useWatchX((WeatherManager x) => x.updateWeatherCommand.isExecuting);
     final updateButtonEnbaled =
-        useWatchX((TheViewModel x) => x.updateWeatherCommand.canExecute);
+        useWatchX((WeatherManager x) => x.updateWeatherCommand.canExecute);
     final switchValue =
-        useWatchX((TheViewModel x) => x.setExecutionStateCommand);
+        useWatchX((WeatherManager x) => x.setExecutionStateCommand);
 
     return Scaffold(
       appBar: AppBar(title: Text("WeatherDemo")),
@@ -62,7 +62,7 @@ class _HomePageState extends State<HomePage> {
                 fontSize: 20.0,
                 color: Color.fromARGB(255, 0, 0, 0),
               ),
-              onChanged: useGet<TheViewModel>().textChangedCommand,
+              onChanged: useGet<WeatherManager>().textChangedCommand,
             ),
           ),
           Expanded(
@@ -93,14 +93,14 @@ class _HomePageState extends State<HomePage> {
                     color: Color.fromARGB(255, 33, 150, 243),
                     textColor: Color.fromARGB(255, 255, 255, 255),
                     onPressed: updateButtonEnbaled
-                        ? useGet<TheViewModel>().updateWeatherCommand
+                        ? useGet<WeatherManager>().updateWeatherCommand.call
                         : null,
                   ),
                 ),
                 Switch(
-                  value: switchValue,
-                  onChanged: useGet<TheViewModel>().setExecutionStateCommand,
-                ),
+                    value: switchValue,
+                    onChanged:
+                        useGet<WeatherManager>().setExecutionStateCommand),
               ],
             ),
           ),

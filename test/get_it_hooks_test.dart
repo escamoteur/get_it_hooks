@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_protected_member
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -7,69 +8,71 @@ import 'package:get_it/get_it.dart';
 import 'package:get_it_hooks/get_it_hooks.dart';
 
 class Model extends ChangeNotifier {
-  String constantValue;
-  String _country;
-  set country(String val) {
+  String? constantValue;
+  String? _country;
+  set country(String? val) {
     _country = val;
     notifyListeners();
   }
 
-  String get country => _country;
-  final ValueNotifier<String> name;
-  final Model nestedModel;
+  String? get country => _country;
+  final ValueNotifier<String>? name;
+  final Model? nestedModel;
+  // ignore: close_sinks
   final StreamController<String> streamController =
       StreamController<String>.broadcast();
 
-  Model({this.constantValue, String country, this.name, this.nestedModel})
+  Model({this.constantValue, String? country, this.name, this.nestedModel})
       : _country = country;
 
   Stream<String> get stream => streamController.stream;
   final Completer<String> completer = Completer<String>();
-  Future get future => completer.future;
+  Future<String> get future => completer.future;
 }
 
 class TestStateLessWidget extends HookWidget {
   final bool testIsReady;
   final bool testAllReady;
   TestStateLessWidget(
-      {Key key, this.testIsReady = false, this.testAllReady = false})
+      {Key? key, this.testIsReady = false, this.testAllReady = false})
       : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     buildCount++;
-    final onlyRead = useGet<Model>().constantValue;
+    final onlyRead = useGet<Model>().constantValue!;
     final notifierVal = useWatch<ValueNotifier<String>, String>();
-    final country = useWatchOnly((Model x) => x.country);
-    final name = useWatchX((Model x) => x.name);
-    final nestedCountry =
-        useWatchXOnly((Model x) => x.nestedModel, (Model n) => n.country);
+    final country = useWatchOnly((Model x) => x.country!);
+    final name = useWatchX((Model x) => x.name!);
+    final nestedCountry = useWatchXOnly<Model, Model, String>(
+        (Model x) => x.nestedModel!, (Model n) => n.country!);
     final streamResult = useWatchStream((Model x) => x.stream, 'streamResult');
     final futureResult = useWatchFuture((Model x) => x.future, 'futureResult');
-    useStreamHandler((Model x) => x.stream, (context, x, cancel) {
+    useStreamHandler<Model, String>((x) => x.stream, (context, x, cancel) {
       streamHandlerResult = x.data;
       if (streamHandlerResult == 'Cancel') {
         cancel();
       }
-    });
-    useFutureHandler((Model x) => x.future, (context, x, cancel) {
+    }, initialValue: '');
+    useFutureHandler<Model, String>((Model x) => x.future,
+        (context, x, cancel) {
       futureHandlerResult = x.data;
       if (streamHandlerResult == 'Cancel') {
         cancel();
       }
-    });
-    useRegisterHandler((Model x) => x.name, (context, x, cancel) {
+    }, initialValue: '');
+    useRegisterHandler((Model x) => x.name!, (context, dynamic x, cancel) {
       listenableHandlerResult = x;
       if (x == 'Cancel') {
         cancel();
       }
     });
-    bool allReadyResult;
+    bool? allReadyResult;
     if (testAllReady) {
       allReadyResult =
           useAllReady(onReady: (context) => allReadyHandlerResult = 'Ready');
     }
-    bool isReadyResult;
+    bool? isReadyResult;
 
     if (testIsReady) {
       isReadyResult = useIsReady<Model>(
@@ -86,8 +89,8 @@ class TestStateLessWidget extends HookWidget {
             Text(country, key: Key('country')),
             Text(name, key: Key('name')),
             Text(nestedCountry, key: Key('nestedCountry')),
-            Text(streamResult.data, key: Key('streamResult')),
-            Text(futureResult.data, key: Key('futureResult')),
+            Text(streamResult.data!, key: Key('streamResult')),
+            Text(futureResult.data!, key: Key('futureResult')),
             Text(allReadyResult.toString(), key: Key('allReadyResult')),
             Text(isReadyResult.toString(), key: Key('isReadyResult')),
           ],
@@ -97,14 +100,15 @@ class TestStateLessWidget extends HookWidget {
   }
 }
 
-Model theModel;
-ValueNotifier<String> valNotifier;
-int buildCount;
-String streamHandlerResult;
-String futureHandlerResult;
-String listenableHandlerResult;
-String allReadyHandlerResult;
-String isReadyHandlerResult;
+late Model theModel;
+late ValueNotifier<String> valNotifier;
+int buildCount = 0;
+String? streamHandlerResult;
+String? futureHandlerResult;
+String? listenableHandlerResult;
+String? allReadyHandlerResult;
+String? isReadyHandlerResult;
+
 void main() {
   setUp(() async {
     buildCount = 0;
@@ -206,7 +210,7 @@ void main() {
   });
   testWidgets('test watchX', (tester) async {
     await tester.pumpWidget(TestStateLessWidget());
-    theModel.name.value = '42';
+    theModel.name!.value = '42';
     await tester.pump();
 
     final onlyRead = tester.widget<Text>(find.byKey(Key('onlyRead'))).data;
@@ -233,7 +237,7 @@ void main() {
 
   testWidgets('test watchXonly', (tester) async {
     await tester.pumpWidget(TestStateLessWidget());
-    theModel.nestedModel.country = '42';
+    theModel.nestedModel!.country = '42';
     await tester.pump();
 
     final onlyRead = tester.widget<Text>(find.byKey(Key('onlyRead'))).data;
@@ -344,7 +348,7 @@ void main() {
   testWidgets('change multiple data', (tester) async {
     await tester.pumpWidget(TestStateLessWidget());
     theModel.country = 'Lummerland';
-    theModel.name.value = '42';
+    theModel.name!.value = '42';
     await tester.pump();
     await tester.pump();
 
@@ -373,14 +377,14 @@ void main() {
     await tester.pumpWidget(TestStateLessWidget());
 
     expect(theModel.hasListeners, true);
-    expect(theModel.name.hasListeners, true);
+    expect(theModel.name!.hasListeners, true);
     expect(theModel.streamController.hasListener, true);
     expect(valNotifier.hasListeners, true);
 
     await tester.pumpWidget(SizedBox.shrink());
 
     expect(theModel.hasListeners, false);
-    expect(theModel.name.hasListeners, false);
+    expect(theModel.name!.hasListeners, false);
     expect(theModel.streamController.hasListener, false);
     expect(valNotifier.hasListeners, false);
 
@@ -389,7 +393,7 @@ void main() {
   testWidgets('test handlers', (tester) async {
     await tester.pumpWidget(TestStateLessWidget());
 
-    theModel.name.value = '42';
+    theModel.name!.value = '42';
     theModel.streamController.sink.add('4711');
     theModel.completer.complete('66');
 
@@ -399,11 +403,11 @@ void main() {
     expect(listenableHandlerResult, '42');
     expect(futureHandlerResult, '66');
 
-    theModel.name.value = 'Cancel';
+    theModel.name!.value = 'Cancel';
     theModel.streamController.sink.add('Cancel');
     await tester.runAsync(() => Future.delayed(Duration(milliseconds: 100)));
 
-    theModel.name.value = '42';
+    theModel.name!.value = '42';
     theModel.streamController.sink.add('4711');
     await tester.runAsync(() => Future.delayed(Duration(milliseconds: 100)));
 
@@ -414,7 +418,7 @@ void main() {
     await tester.pumpWidget(SizedBox.shrink());
 
     expect(theModel.hasListeners, false);
-    expect(theModel.name.hasListeners, false);
+    expect(theModel.name!.hasListeners, false);
     expect(theModel.streamController.hasListener, false);
     expect(valNotifier.hasListeners, false);
   });

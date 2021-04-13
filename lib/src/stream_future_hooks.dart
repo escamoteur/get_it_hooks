@@ -4,10 +4,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:get_it/get_it.dart';
 
-AsyncSnapshot<R> useWatchStream<T, R>(
+AsyncSnapshot<R> useWatchStream<T extends Object, R>(
     Stream<R> Function(T) select, R initialValue,
-    {String instanceName, bool preserveState = true}) {
-  assert(select != null, 'select can not be null in useWatchStream');
+    {String? instanceName, bool preserveState = true}) {
   return use(_WatchStreamHook<T, R>(
       select: select,
       instanceName: instanceName,
@@ -15,41 +14,40 @@ AsyncSnapshot<R> useWatchStream<T, R>(
       preserveState: preserveState));
 }
 
-class _WatchStreamHook<T, R> extends Hook<AsyncSnapshot<R>> {
+class _WatchStreamHook<T extends Object, R> extends Hook<AsyncSnapshot<R>> {
   const _WatchStreamHook(
-      {@required this.instanceName,
-      @required this.select,
-      @required this.initialValue,
-      @required this.preserveState,
+      {required this.instanceName,
+      required this.select,
+      required this.initialValue,
+      required this.preserveState,
       this.handler});
 
   final void Function(BuildContext context, AsyncSnapshot<R> snapshot,
-      void Function() cancel) handler;
+      void Function() cancel)? handler;
   final bool preserveState;
   final R initialValue;
-  final String instanceName;
+  final String? instanceName;
   final Stream<R> Function(T) select;
   @override
   _WatchStreamHookState<T, R> createState() => _WatchStreamHookState<T, R>();
 }
 
-class _WatchStreamHookState<T, R>
+class _WatchStreamHookState<T extends Object, R>
     extends HookState<AsyncSnapshot<R>, _WatchStreamHook<T, R>> {
-  Stream<R> stream;
-  StreamSubscription<R> _subscription;
-  T targetObject;
-  AsyncSnapshot<R> _lastValue;
+  late Stream<R> stream;
+  StreamSubscription<R>? _subscription;
+  late T targetObject;
+  late AsyncSnapshot<R> _lastValue;
 
   @override
   void initHook() {
     super.initHook();
     targetObject = GetIt.I<T>(instanceName: hook.instanceName);
     stream = hook.select(targetObject);
-    assert(stream != null, 'select returned null in useWatchStream');
 
     _lastValue = initial();
     if (hook.handler != null && hook.initialValue != null) {
-      hook.handler(this.context, _lastValue, _unsubscribe);
+      hook.handler!(this.context, _lastValue, _unsubscribe);
     }
     _subscribe();
   }
@@ -58,7 +56,7 @@ class _WatchStreamHookState<T, R>
   AsyncSnapshot<R> build(BuildContext context) {
     /// as the select could return a different Stream on different Builds
     /// we have to handle this appropriately
-    final selectedStream = hook.select(targetObject);
+    final Stream<R> selectedStream = hook.select(targetObject);
     if (selectedStream != stream) {
       _switchSubscription();
     }
@@ -82,7 +80,7 @@ class _WatchStreamHookState<T, R>
       } else {
         _lastValue = initial();
         if (hook.handler != null && hook.initialValue != null) {
-          hook.handler(this.context, _lastValue, _unsubscribe);
+          hook.handler!(this.context, _lastValue, _unsubscribe);
         }
       }
     }
@@ -102,26 +100,24 @@ class _WatchStreamHookState<T, R>
   }
 
   void _subscribe() {
-    if (stream != null) {
-      _subscription = stream.listen((data) {
-        setState(() {
-          _lastValue = afterData(_lastValue, data);
-        });
-
-        hook.handler?.call(this.context, _lastValue, _unsubscribe);
-      }, onError: (dynamic error) {
-        setState(() {
-          _lastValue = afterError(_lastValue, error);
-        });
-        hook.handler?.call(this.context, _lastValue, _unsubscribe);
-      }, onDone: () {
-        setState(() {
-          _lastValue = afterDone(_lastValue);
-        });
-        hook.handler?.call(this.context, _lastValue, _unsubscribe);
+    _subscription = stream.listen((data) {
+      setState(() {
+        _lastValue = afterData(_lastValue, data);
       });
-      _lastValue = afterConnected(_lastValue);
-    }
+
+      hook.handler?.call(this.context, _lastValue, _unsubscribe);
+    }, onError: (dynamic error) {
+      setState(() {
+        _lastValue = afterError(_lastValue, error);
+      });
+      hook.handler?.call(this.context, _lastValue, _unsubscribe);
+    }, onDone: () {
+      setState(() {
+        _lastValue = afterDone(_lastValue);
+      });
+      hook.handler?.call(this.context, _lastValue, _unsubscribe);
+    });
+    _lastValue = afterConnected(_lastValue);
   }
 
   AsyncSnapshot<R> initial() =>
@@ -148,10 +144,9 @@ class _WatchStreamHookState<T, R>
   String get debugLabel => 'useWatchStream';
 }
 
-AsyncSnapshot<R> useWatchFuture<T, R>(
+AsyncSnapshot<R> useWatchFuture<T extends Object, R>(
     Future<R> Function(T) select, R initialValue,
-    {String instanceName, bool preserveState = true}) {
-  assert(select != null, 'select can not be null in useWatchStream');
+    {String? instanceName, bool preserveState = true}) {
   return use(_WatchFutureHook<T, R>(
     select: select,
     instanceName: instanceName,
@@ -160,81 +155,73 @@ AsyncSnapshot<R> useWatchFuture<T, R>(
   ));
 }
 
-class _WatchFutureHook<T, R> extends Hook<AsyncSnapshot<R>> {
+class _WatchFutureHook<T extends Object, R> extends Hook<AsyncSnapshot<R>> {
   const _WatchFutureHook({
-    @required this.instanceName,
-    @required this.select,
-    @required this.preserveState,
+    required this.instanceName,
+    required this.select,
+    required this.preserveState,
     this.handler,
     this.futureProvider,
-    this.initialValueProvider,
+    required this.initialValueProvider,
     this.executeImmediately = false,
   });
   final bool executeImmediately;
-  final Future<R> Function() futureProvider;
+  final Future<R> Function()? futureProvider;
   final R Function() initialValueProvider;
   final void Function(BuildContext context, AsyncSnapshot<R> snapshot,
-      void Function() cancel) handler;
+      void Function() cancel)? handler;
   final bool preserveState;
-  final String instanceName;
-  final Future<R> Function(T) select;
+  final String? instanceName;
+  final Future<R> Function(T)? select;
   @override
   _WatchFutureHookState<T, R> createState() => _WatchFutureHookState<T, R>();
 }
 
-class _WatchFutureHookState<T, R>
+class _WatchFutureHookState<T extends Object, R>
     extends HookState<AsyncSnapshot<R>, _WatchFutureHook<T, R>> {
-  Future<R> future;
-  T targetObject;
-  AsyncSnapshot<R> _lastValue;
+  late Future<R> future;
+  T? targetObject;
+  late AsyncSnapshot<R> _lastValue;
 
-  Object _activeCallbackIdentity;
+  Object? _activeCallbackIdentity;
 
   @override
   void initHook() {
     super.initHook();
-    if (hook.futureProvider == null) {
+    if (hook.futureProvider == null && T is Object) {
       targetObject = GetIt.I<T>(instanceName: hook.instanceName);
-      future = hook.select(targetObject);
-      assert(future != null, 'select returned null in useWatchFuture');
+      future = hook.select!(targetObject!);
     } else {
-      future = hook.futureProvider();
+      future = hook.futureProvider!();
     }
     _lastValue = AsyncSnapshot.withData(
-        ConnectionState.none, hook.initialValueProvider?.call());
+        ConnectionState.none, hook.initialValueProvider());
 
     if (hook.handler != null && hook.executeImmediately) {
-      hook.handler(this.context, _lastValue, _unsubscribe);
+      hook.handler!(this.context, _lastValue, _unsubscribe);
     }
     _subscribe();
   }
 
   void _subscribe() {
-    if (future != null) {
-      /// by using a local variable we ensure that only the value and not the
-      /// variable is captured.
-      final callbackIdentity = Object();
-      _activeCallbackIdentity = callbackIdentity;
-      future.then(
-        (x) {
-          if (_activeCallbackIdentity == callbackIdentity) {
-            // only update if Future is still valid
-            setState(() =>
-                _lastValue = AsyncSnapshot.withData(ConnectionState.done, x));
-            hook.handler?.call(this.context, _lastValue, _unsubscribe);
-          }
-        },
-        onError: (error) {
-          if (future != null) {
-            // print('Future error');
-            setState(() => _lastValue =
-                AsyncSnapshot.withError(ConnectionState.done, error));
-            hook.handler?.call(this.context, _lastValue, _unsubscribe);
-          }
-        },
-      );
-      _lastValue = _lastValue.inState(ConnectionState.waiting);
-    }
+    final callbackIdentity = Object();
+    _activeCallbackIdentity = callbackIdentity;
+    future.then(
+      (x) {
+        if (_activeCallbackIdentity == callbackIdentity) {
+          // only update if Future is still valid
+          setState(() =>
+              _lastValue = AsyncSnapshot.withData(ConnectionState.done, x));
+          hook.handler?.call(this.context, _lastValue, _unsubscribe);
+        }
+      },
+      onError: (error) {
+        setState(() =>
+            _lastValue = AsyncSnapshot.withError(ConnectionState.done, error));
+        hook.handler?.call(this.context, _lastValue, _unsubscribe);
+      },
+    );
+    _lastValue = _lastValue.inState(ConnectionState.waiting);
   }
 
   void _unsubscribe() {
@@ -245,9 +232,12 @@ class _WatchFutureHookState<T, R>
   AsyncSnapshot<R> build(BuildContext context) {
     /// as the select could return a different Future on different Builds
     /// we have to handle this appropriately
-    final selectedFuture = hook.select(targetObject);
-    if (selectedFuture != future) {
-      _switchSubscription();
+    if (hook.futureProvider == null) {
+      // in case of allReady or isReady we don't update
+      final Future<R> selectedFuture = hook.select!(targetObject!);
+      if (selectedFuture != future) {
+        _switchSubscription();
+      }
     }
     return _lastValue;
   }
@@ -257,23 +247,23 @@ class _WatchFutureHookState<T, R>
     super.didUpdateHook(oldHook);
     if (hook.futureProvider == null &&
         (oldHook.instanceName != hook.instanceName ||
-            oldHook.select(targetObject) != future)) {
+            oldHook.select!(targetObject!) != future)) {
       targetObject = GetIt.I<T>(instanceName: hook.instanceName);
       _switchSubscription();
     }
   }
 
   void _switchSubscription() {
-    future = hook.select(targetObject);
+    future = hook.select!(targetObject!);
     if (_activeCallbackIdentity != null) {
       _unsubscribe();
       if (!hook.preserveState) {
         _lastValue = AsyncSnapshot.withData(
-            ConnectionState.none, hook.initialValueProvider?.call());
+            ConnectionState.none, hook.initialValueProvider());
       } else {
         _lastValue = _lastValue.inState(ConnectionState.none);
         if (hook.handler != null && hook.executeImmediately) {
-          hook.handler(this.context, _lastValue, _unsubscribe);
+          hook.handler!(this.context, _lastValue, _unsubscribe);
         }
       }
       _subscribe();
@@ -289,13 +279,13 @@ class _WatchFutureHookState<T, R>
   String get debugLabel => 'useWatchFuture';
 }
 
-void useStreamHandler<T, R>(
+void useStreamHandler<T extends Object, R>(
     Stream<R> Function(T) select,
     void Function(BuildContext context, AsyncSnapshot<R> newValue,
             void Function() cancel)
         handler,
-    {R initialValue,
-    String instanceName,
+    {required R initialValue,
+    String? instanceName,
     bool preserveState = true}) {
   return use(_WatchStreamHook<T, R>(
     initialValue: initialValue,
@@ -306,13 +296,13 @@ void useStreamHandler<T, R>(
   ));
 }
 
-void useFutureHandler<T, R>(
+void useFutureHandler<T extends Object, R>(
     Future<R> Function(T) select,
     void Function(BuildContext context, AsyncSnapshot<R> newValue,
             void Function() cancel)
         handler,
-    {R initialValue,
-    String instanceName,
+    {required R initialValue,
+    String? instanceName,
     bool preserveState = true,
     bool executeImmediately = false}) {
   return use(_WatchFutureHook<T, R>(
@@ -325,16 +315,16 @@ void useFutureHandler<T, R>(
 }
 
 bool useAllReady(
-    {void Function(BuildContext context) onReady,
-    void Function(BuildContext context, Object error) onError,
-    Duration timeout}) {
-  return use(_WatchFutureHook<void, bool>(
+    {void Function(BuildContext context)? onReady,
+    void Function(BuildContext context, Object error)? onError,
+    Duration? timeout}) {
+  return use(_WatchFutureHook<Object, bool>(
     instanceName: null,
     select: null,
     preserveState: true,
     handler: (context, x, dispose) {
       if (x.hasError) {
-        onError?.call(context, x.error);
+        onError?.call(context, x.error!);
       } else {
         onReady?.call(context);
         (context as Element).markNeedsBuild();
@@ -346,15 +336,15 @@ bool useAllReady(
     /// as `GetIt.allReady` returns a Future<void> we convert it
     /// to a bool because if this Future completes the meaning is true.
     futureProvider: () => GetIt.I.allReady(timeout: timeout).then((_) => true),
-  )).data;
+  )).data!;
 }
 
-bool useIsReady<T>(
-    {void Function(BuildContext context) onReady,
-    void Function(BuildContext context, Object error) onError,
-    Duration timeout,
-    String instanceName}) {
-  return use(_WatchFutureHook<void, bool>(
+bool useIsReady<T extends Object>(
+    {void Function(BuildContext context)? onReady,
+    void Function(BuildContext context, Object? error)? onError,
+    Duration? timeout,
+    String? instanceName}) {
+  return use(_WatchFutureHook<Object, bool>(
       preserveState: true,
       select: null,
       instanceName: instanceName,
@@ -374,5 +364,5 @@ bool useIsReady<T>(
       /// to a bool because if this Future completes the meaning is true.
       futureProvider: () => GetIt.I
           .isReady<T>(instanceName: instanceName, timeout: timeout)
-          .then((_) => true))).data;
+          .then((_) => true))).data!;
 }

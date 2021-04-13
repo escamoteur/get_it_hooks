@@ -3,9 +3,9 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:get_it/get_it.dart';
 
 void pushScope({
-  void Function(GetIt getIt) init,
-  void Function() dispose,
-  String scopeName,
+  void Function(GetIt getIt)? init,
+  void Function()? dispose,
+  String? scopeName,
 }) {
   use(_PushScopeHook(init: init, dispose: dispose, scopeName: scopeName));
 }
@@ -17,9 +17,9 @@ class _PushScopeHook extends Hook<void> {
     this.dispose,
   });
 
-  final void Function(GetIt getIt) init;
-  final void Function() dispose;
-  final String scopeName;
+  final void Function(GetIt getIt)? init;
+  final void Function()? dispose;
+  final String? scopeName;
 
   @override
   _PushScopeHookState createState() => _PushScopeHookState();

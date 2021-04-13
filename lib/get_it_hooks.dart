@@ -8,7 +8,7 @@ export 'package:get_it_hooks/src/listenable_hooks.dart';
 export 'package:get_it_hooks/src/scope_hooks.dart';
 export 'package:get_it_hooks/src/stream_future_hooks.dart';
 
-T useGetIt<T>({String instanceName, dynamic param1, param2}) {
+T useGetIt<T extends Object>({String? instanceName, dynamic param1, param2}) {
   return GetIt.I
       .get<T>(instanceName: instanceName, param1: param1, param2: param2);
 }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_weather_demo/the_viewmodel.dart';
+import 'package:flutter_weather_demo/weather_manager.dart';
 import 'package:functional_listener/functional_listener.dart';
 import 'package:get_it/get_it.dart';
 
@@ -11,11 +11,11 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  ListenableSubscription errorSubscription;
+  ListenableSubscription? errorSubscription;
 
   @override
   void didChangeDependencies() {
-    errorSubscription ??= GetIt.I<TheViewModel>()
+    errorSubscription ??= GetIt.I<WeatherManager>()
         .updateWeatherCommand
         .thrownExceptions
         .where((x) => x != null) // filter out the error value reset
@@ -32,7 +32,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    errorSubscription.cancel();
+    errorSubscription!.cancel();
     super.dispose();
   }
 
@@ -54,7 +54,7 @@ class _HomePageState extends State<HomePage> {
                 fontSize: 20.0,
                 color: Color.fromARGB(255, 0, 0, 0),
               ),
-              onChanged: GetIt.I<TheViewModel>().textChangedCommand,
+              onChanged: GetIt.I<WeatherManager>().textChangedCommand,
             ),
           ),
           Expanded(
@@ -63,8 +63,9 @@ class _HomePageState extends State<HomePage> {
               children: [
                 WeatherListView(),
                 ValueListenableBuilder<bool>(
-                  valueListenable:
-                      GetIt.I<TheViewModel>().updateWeatherCommand.isExecuting,
+                  valueListenable: GetIt.I<WeatherManager>()
+                      .updateWeatherCommand
+                      .isExecuting,
                   builder: (BuildContext context, bool isRunning, _) {
                     // if true we show a busy Spinner otherwise the ListView
                     if (isRunning == true) {
@@ -90,30 +91,31 @@ class _HomePageState extends State<HomePage> {
               children: <Widget>[
                 Expanded(
                   child: ValueListenableBuilder<bool>(
-                    valueListenable:
-                        GetIt.I<TheViewModel>().updateWeatherCommand.canExecute,
+                    valueListenable: GetIt.I<WeatherManager>()
+                        .updateWeatherCommand
+                        .canExecute,
                     builder: (BuildContext context, bool canExecute, _) {
                       // Depending on the value of canEcecute we set or clear the Handler
                       final handler = canExecute
-                          ? GetIt.I<TheViewModel>().updateWeatherCommand
+                          ? GetIt.I<WeatherManager>().updateWeatherCommand
                           : null;
                       return RaisedButton(
                         child: Text("Update"),
                         color: Color.fromARGB(255, 33, 150, 243),
                         textColor: Color.fromARGB(255, 255, 255, 255),
-                        onPressed: handler,
+                        onPressed: handler as void Function()?,
                       );
                     },
                   ),
                 ),
                 ValueListenableBuilder<bool>(
                     valueListenable:
-                        GetIt.I<TheViewModel>().setExecutionStateCommand,
+                        GetIt.I<WeatherManager>().setExecutionStateCommand,
                     builder: (context, value, _) {
                       return Switch(
                         value: value,
                         onChanged:
-                            GetIt.I<TheViewModel>().setExecutionStateCommand,
+                            GetIt.I<WeatherManager>().setExecutionStateCommand,
                       );
                     })
               ],
