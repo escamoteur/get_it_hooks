@@ -1,3 +1,7 @@
+## [1.0.1] - 21.06.2021
+
+* fixed unnecessary rebuilds in handler hooks
+* bumped version of get_it dependency
 ## [1.0.0] - 13.04.2021
 
 * null safe version
