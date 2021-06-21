@@ -101,21 +101,26 @@ class _WatchStreamHookState<T extends Object, R>
 
   void _subscribe() {
     _subscription = stream.listen((data) {
-      setState(() {
-        _lastValue = afterData(_lastValue, data);
-      });
-
-      hook.handler?.call(this.context, _lastValue, _unsubscribe);
+      _lastValue = afterData(_lastValue, data);
+      if (hook.handler == null) {
+        setState(() {});
+      } else {
+        hook.handler?.call(this.context, _lastValue, _unsubscribe);
+      }
     }, onError: (dynamic error) {
-      setState(() {
-        _lastValue = afterError(_lastValue, error);
-      });
-      hook.handler?.call(this.context, _lastValue, _unsubscribe);
+      _lastValue = afterError(_lastValue, error);
+      if (hook.handler == null) {
+        setState(() {});
+      } else {
+        hook.handler?.call(this.context, _lastValue, _unsubscribe);
+      }
     }, onDone: () {
-      setState(() {
-        _lastValue = afterDone(_lastValue);
-      });
-      hook.handler?.call(this.context, _lastValue, _unsubscribe);
+      _lastValue = afterDone(_lastValue);
+      if (hook.handler == null) {
+        setState(() {});
+      } else {
+        hook.handler?.call(this.context, _lastValue, _unsubscribe);
+      }
     });
     _lastValue = afterConnected(_lastValue);
   }
@@ -210,15 +215,21 @@ class _WatchFutureHookState<T extends Object, R>
       (x) {
         if (_activeCallbackIdentity == callbackIdentity) {
           // only update if Future is still valid
-          setState(() =>
-              _lastValue = AsyncSnapshot.withData(ConnectionState.done, x));
-          hook.handler?.call(this.context, _lastValue, _unsubscribe);
+          _lastValue = AsyncSnapshot.withData(ConnectionState.done, x);
+          if (hook.handler == null) {
+            setState(() {});
+          } else {
+            hook.handler?.call(this.context, _lastValue, _unsubscribe);
+          }
         }
       },
       onError: (error) {
-        setState(() =>
-            _lastValue = AsyncSnapshot.withError(ConnectionState.done, error));
-        hook.handler?.call(this.context, _lastValue, _unsubscribe);
+        _lastValue = AsyncSnapshot.withError(ConnectionState.done, error);
+        if (hook.handler == null) {
+          setState(() {});
+        } else {
+          hook.handler?.call(this.context, _lastValue, _unsubscribe);
+        }
       },
     );
     _lastValue = _lastValue.inState(ConnectionState.waiting);
