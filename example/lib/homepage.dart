@@ -88,10 +88,12 @@ class _HomePageState extends State<HomePage> {
             child: Row(
               children: <Widget>[
                 Expanded(
-                  child: RaisedButton(
+                  child: ElevatedButton(
                     child: Text("Update"),
-                    color: Color.fromARGB(255, 33, 150, 243),
-                    textColor: Color.fromARGB(255, 255, 255, 255),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Color.fromARGB(255, 33, 150, 243),
+                        textStyle: TextStyle(
+                            color: Color.fromARGB(255, 255, 255, 255))),
                     onPressed: updateButtonEnbaled
                         ? useGet<WeatherManager>().updateWeatherCommand.call
                         : null,
